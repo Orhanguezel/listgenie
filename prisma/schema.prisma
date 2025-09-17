@@ -1,0 +1,182 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider          = "postgresql"
+  url               = env("DATABASE_URL")
+  shadowDatabaseUrl = env("SHADOW_DATABASE_URL")
+}
+
+model User {
+  id                     String    @id @default(cuid())
+  email                  String    @unique
+  firstName              String?
+  lastName               String?
+  plan                   String    @default("FREE")
+  credits                Int       @default(0)
+  planExpiresAt          DateTime?
+  apiKey                 String?
+  teamId                 String?
+  role                   String?
+  lastLowCreditEmailSent DateTime?
+  templateStyle          String?
+  templatePreferences    String?
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+
+  // İlişkiler
+  team             Team?              @relation(fields: [teamId], references: [id])
+  invitationsSent  TeamInvitation[]   @relation("InvitationsByUser")
+  usages           Usage[]
+  notifications    UserNotification[]
+  tickets          SupportTicket[]
+  ticketsResponded SupportTicket[]    @relation("TicketResponder")
+  ownTeams         Team[]             @relation("TeamOwner")
+
+  // 🔥 EKSİK OLAN KARŞI ALAN: 1-1 EtsyShopConfig
+  etsyShopConfig EtsyShopConfig?
+
+  @@index([teamId])
+}
+
+model Team {
+  id         String   @id @default(cuid())
+  name       String
+  ownerId    String
+  maxMembers Int      @default(3)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  owner       User             @relation("TeamOwner", fields: [ownerId], references: [id])
+  members     User[]
+  invitations TeamInvitation[]
+}
+
+model TeamInvitation {
+  id         String    @id @default(cuid())
+  email      String
+  inviterId  String
+  teamId     String
+  token      String    @unique
+  expiresAt  DateTime
+  status     String    @default("pending")
+  createdAt  DateTime  @default(now())
+  acceptedAt DateTime?
+
+  inviter User @relation("InvitationsByUser", fields: [inviterId], references: [id])
+  team    Team @relation(fields: [teamId], references: [id])
+
+  @@index([email])
+  @@index([teamId])
+}
+
+model Usage {
+  id            String   @id @default(cuid())
+  userId        String
+  listingTitle  String?
+  generatedData String?
+  etsyListingId String?
+  createdAt     DateTime @default(now())
+
+  user        User         @relation(fields: [userId], references: [id])
+  etsyListing EtsyListing?
+
+  @@index([userId])
+}
+
+model EtsyListing {
+  id            String    @id @default(cuid())
+  usageId       String    @unique
+  etsyListingId String    @unique
+  etsyUrl       String?
+  title         String?
+  price         String    @default("0")
+  isActive      Boolean   @default(true)
+  views         Int       @default(0)
+  favorites     Int       @default(0)
+  lastSyncAt    DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  usage     Usage           @relation(fields: [usageId], references: [id])
+  analytics EtsyAnalytics[]
+}
+
+model EtsyAnalytics {
+  id             String   @id @default(cuid())
+  etsyListingId  String
+  date           DateTime @default(now())
+  views          Int      @default(0)
+  favorites      Int      @default(0)
+  conversionRate Float    @default(0)
+
+  etsyListing EtsyListing @relation(fields: [etsyListingId], references: [id])
+
+  @@index([etsyListingId, date])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  title     String
+  content   String
+  type      String   @default("announcement")
+  priority  String   @default("normal")
+  icon      String?
+  actionUrl String?
+  sentBy    String?
+  sentAt    DateTime @default(now())
+
+  userNotifications UserNotification[]
+}
+
+model UserNotification {
+  id             String    @id @default(cuid())
+  userId         String
+  notificationId String
+  isRead         Boolean   @default(false)
+  readAt         DateTime?
+  createdAt      DateTime  @default(now())
+
+  user         User         @relation(fields: [userId], references: [id])
+  notification Notification @relation(fields: [notificationId], references: [id])
+
+  @@unique([userId, notificationId], name: "user_notification_unique")
+  @@index([userId])
+  @@index([notificationId])
+}
+
+model SupportTicket {
+  id            String    @id @default(cuid())
+  userId        String
+  subject       String
+  message       String
+  priority      String    @default("normal") // normal | high
+  status        String    @default("open") // open | in_progress | closed | resolved
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  adminResponse String?
+  responseAt    DateTime?
+  respondedBy   String?
+  assignedTo    String?
+
+  user      User? @relation(fields: [userId], references: [id])
+  responder User? @relation("TicketResponder", fields: [respondedBy], references: [id])
+
+  @@index([status])
+  @@index([priority])
+}
+
+model EtsyShopConfig {
+  id         String    @id @default(cuid())
+  userId     String    @unique
+  shopId     String
+  shopName   String
+  apiKey     String?
+  isActive   Boolean   @default(true)
+  lastSyncAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+}

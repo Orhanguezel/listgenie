@@ -1,0 +1,29 @@
+{
+  "name": "listsgenie",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "start": "node ./src/index.js",
+    "dev": "NODE_ENV=development nodemon ./src/index.js",
+    "postinstall": "prisma generate"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.16.2",
+    "axios": "^1.12.2",
+    "cheerio": "^1.1.2",
+    "compression": "^1.8.1",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.2",
+    "express": "^5.1.0",
+    "express-rate-limit": "^8.1.0",
+    "helmet": "^8.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^2.0.2",
+    "node-cron": "^4.2.1",
+    "nodemailer": "^7.0.6",
+    "winston": "^3.17.0"
+  },
+  "devDependencies": {
+    "prisma": "^6.16.2"
+  }
+}
